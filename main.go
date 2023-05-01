@@ -26,6 +26,7 @@ func main() {
 	router.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{"*"},
 	}))
+	router.Use(middleware.Logger())
 	routes.AppRoute(router, db)
 	router.Logger.Fatal(router.Start(":" + os.Getenv("PORT")))
 }
