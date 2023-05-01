@@ -13,12 +13,12 @@ import (
 )
 
 func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
-	response := &structs.Response{
-		Code:    http.StatusOK,
-		Message: "Success get positions",
-	}
-
 	router.GET("/positions", func(ctx echo.Context) error {
+		response := &structs.Response{
+			Code:    http.StatusOK,
+			Message: "Success get employee",
+		}
+
 		limit, errLimit := strconv.Atoi(ctx.QueryParam("limit"))
 		if errLimit != nil && limit != 0 {
 			response.Code = http.StatusBadRequest

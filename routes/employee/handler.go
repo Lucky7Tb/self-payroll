@@ -13,12 +13,12 @@ import (
 )
 
 func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
-	response := &structs.Response{
-		Code:    http.StatusOK,
-		Message: "Success get employee",
-	}
-
 	router.GET("/employee", func(ctx echo.Context) error {
+		response := &structs.Response{
+			Code:    http.StatusOK,
+			Message: "Success get employee",
+		}
+
 		limit, errLimit := strconv.Atoi(ctx.QueryParam("limit"))
 		if errLimit != nil && limit != 0 {
 			response.Code = http.StatusBadRequest

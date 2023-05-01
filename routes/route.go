@@ -6,6 +6,7 @@ import (
 	"self-payroll/routes/company"
 	"self-payroll/routes/employee"
 	"self-payroll/routes/position"
+	"self-payroll/routes/transaction"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -23,4 +24,5 @@ func AppRoute(router *echo.Echo, db *gorm.DB) {
 	position.InitPositionRoute(router, db)
 	employee.InitEmployeeRoute(router, db)
 	company.InitCompanyRoute(router, db)
+	transaction.InitTransactionRoute(router, db)
 }

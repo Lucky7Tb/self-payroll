@@ -12,12 +12,12 @@ import (
 )
 
 func InitCompanyRoute(router *echo.Echo, db *gorm.DB) {
-	response := &structs.Response{
-		Code:    http.StatusOK,
-		Message: "Success get company",
-	}
-
 	router.GET("/company", func(ctx echo.Context) error {
+		response := &structs.Response{
+			Code:    http.StatusOK,
+			Message: "Success get company",
+		}
+
 		var company models.Company
 		result := db.Select("id", "name", "address", "balance").Find(&company)
 		if result.Error != nil {
