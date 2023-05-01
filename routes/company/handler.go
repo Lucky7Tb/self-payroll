@@ -1,11 +1,11 @@
 package company
 
 import (
+	"errors"
 	"net/http"
 	"self-payroll/common/structs"
 	"self-payroll/models"
 	"self-payroll/routes/company/dto"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"gorm.io/gorm"
@@ -52,11 +52,7 @@ func InitCompanyRoute(router *echo.Echo, db *gorm.DB) {
 			return ctx.JSON(http.StatusInternalServerError, response)
 		}
 
-		company.Name = dto.Name
-		company.Address = dto.Address
-		company.Balance = dto.Balance
-		company.UpdatedAt = time.Now()
-		err = db.Save(&company).Error
+		err = db.Model(&company).Updates(&models.Company{Name: dto.Name, Address: dto.Address, Balance: dto.Balance}).Error
 
 		if err != nil {
 			response.Code = http.StatusInternalServerError
@@ -78,25 +74,46 @@ func InitCompanyRoute(router *echo.Echo, db *gorm.DB) {
 			return err
 		}
 
-		var company models.Company
-		err := db.First(&company).Error
+		err := db.Transaction(func(transaction *gorm.DB) error {
+			var company models.Company
+			var err error
+
+			err = db.Select("id", "balance").First(&company).Error
+			if err != nil {
+				return err
+			}
+
+			err = transaction.Create(&models.Transaction{Type: "Kredit", Amount: dto.Balance, Note: "Topup balance company"}).Error
+			if err != nil {
+				return err
+			}
+
+			err = transaction.Model(&company).Update("Balance", company.Balance+dto.Balance).Error
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
 		if err != nil {
-			if err.Error() == "record not found" {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Code = http.StatusNotFound
 				response.Message = "Position not found!"
 				return ctx.JSON(http.StatusNotFound, response)
 			}
+
+			if errors.Is(err, gorm.ErrInvalidTransaction) {
+				response.Code = http.StatusInternalServerError
+				response.Message = "Failed to update company balance and insert transaction history"
+				return ctx.JSON(http.StatusInternalServerError, response)
+			}
+
 			response.Code = http.StatusInternalServerError
 			response.Message = "Internal server error"
 			return ctx.JSON(http.StatusInternalServerError, response)
 		}
-		company.Balance = company.Balance + dto.Balance
-		err = db.Save(&company).Error
-		if err != nil {
-			response.Code = http.StatusInternalServerError
-			response.Message = "Internal server error"
-			return ctx.JSON(http.StatusInternalServerError, response)
-		}
+
 		return ctx.JSON(http.StatusOK, response)
 	})
 }

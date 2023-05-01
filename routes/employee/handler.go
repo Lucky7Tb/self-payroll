@@ -2,6 +2,7 @@ package employee
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 	"self-payroll/common/structs"
 	"self-payroll/models"
@@ -93,6 +94,75 @@ func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
 		return ctx.JSON(http.StatusCreated, response)
 	})
 
+	router.POST("/employee/withdraw", func(ctx echo.Context) error {
+		response := &structs.Response{
+			Code:    http.StatusCreated,
+			Message: "Success withdraw",
+		}
+		dto := new(dto.WithdrawDto)
+		ctx.Bind(dto)
+		if err := ctx.Validate(dto); err != nil {
+			return err
+		}
+
+		var employee models.User
+		err := db.Select("id", "name", "position_id").Where("id = ? AND secret_id = ?", dto.Id, dto.SecretId).Preload("Position", func(tx *gorm.DB) *gorm.DB {
+			return tx.Select("id", "salary")
+		}).Take(&employee).Error
+
+		if err != nil {
+			if err.Error() == "record not found" {
+				response.Code = http.StatusNotFound
+				response.Message = "Employee not found!"
+				return ctx.JSON(http.StatusNotFound, response)
+			}
+			response.Code = http.StatusInternalServerError
+			response.Message = "Internal server error"
+			return ctx.JSON(http.StatusInternalServerError, response)
+		}
+
+		err = db.Transaction(func(transaction *gorm.DB) error {
+			var company models.Company
+			var err error
+			err = db.Select("id", "balance").First(&company).Error
+			if err != nil {
+				return err
+			}
+
+			err = transaction.Create(&models.Transaction{Type: "Debit", Amount: employee.Position.Salary, Note: fmt.Sprintf("Withdraw salary %s", employee.Name)}).Error
+			if err != nil {
+				return err
+			}
+
+			err = transaction.Model(&company).Update("Balance", company.Balance-employee.Position.Salary).Error
+			if err != nil {
+				return err
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				response.Code = http.StatusNotFound
+				response.Message = "Company not found!"
+				return ctx.JSON(http.StatusNotFound, response)
+			}
+
+			if errors.Is(err, gorm.ErrInvalidTransaction) {
+				response.Code = http.StatusInternalServerError
+				response.Message = "Failed to update company balance and insert transaction history"
+				return ctx.JSON(http.StatusInternalServerError, response)
+			}
+
+			response.Code = http.StatusInternalServerError
+			response.Message = "Internal server error"
+			return ctx.JSON(http.StatusInternalServerError, response)
+		}
+
+		return ctx.JSON(http.StatusCreated, response)
+	})
+
 	router.GET("/employee/:id", func(ctx echo.Context) error {
 		response := &structs.Response{
 			Code:    http.StatusOK,
@@ -103,7 +173,7 @@ func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
 		var employee models.User
 		err := db.Select("id", "position_id", "employee_id", "secret_id", "name", "phone", "email", "address").Where("id = ?", id).Preload("Position").Take(&employee).Error
 		if err != nil {
-			if err.Error() == "record not found" {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Code = http.StatusNotFound
 				response.Message = "Emplpyee not found!"
 				return ctx.JSON(http.StatusNotFound, response)

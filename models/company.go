@@ -7,12 +7,12 @@ type Tabler interface {
 }
 
 type Company struct {
-	ID        string    `gorm:"default:uuid_generate_v4()" json:"id"`
+	Id        string    `gorm:"default:uuid_generate_v4()" json:"-"`
 	Name      string    `json:"name"`
 	Address   string    `json:"address"`
 	Balance   uint64    `json:"balance"`
 	createdAt time.Time `gorm:"default:CURRENT_TIMESTAMP(3)"`
-	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP(3)" json:"-"`
+	updatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP(3)"`
 }
 
 func (Company) TableName() string {

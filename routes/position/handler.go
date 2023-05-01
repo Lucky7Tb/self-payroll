@@ -16,7 +16,7 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 	router.GET("/positions", func(ctx echo.Context) error {
 		response := &structs.Response{
 			Code:    http.StatusOK,
-			Message: "Success get employee",
+			Message: "Success get position",
 		}
 
 		limit, errLimit := strconv.Atoi(ctx.QueryParam("limit"))
@@ -116,10 +116,12 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 			return ctx.JSON(http.StatusInternalServerError, response)
 		}
 		err = db.Delete(&position).Error
-		if err.Error() == "ERROR: update or delete on table \"positions\" violates foreign key constraint \"fk_users_positions\" on table \"users\" (SQLSTATE 23503)" {
-			response.Code = http.StatusBadRequest
-			response.Message = "Cannot delete this position because there is employee on this position"
-			return ctx.JSON(http.StatusBadRequest, response)
+		if err != nil {
+			if err.Error() == "ERROR: update or delete on table \"positions\" violates foreign key constraint \"fk_users_positions\" on table \"users\" (SQLSTATE 23503)" {
+				response.Code = http.StatusBadRequest
+				response.Message = "Cannot delete this position because there is employee on this position"
+				return ctx.JSON(http.StatusBadRequest, response)
+			}
 		}
 		return ctx.JSON(http.StatusNoContent, response)
 	})
