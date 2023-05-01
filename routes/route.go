@@ -3,6 +3,7 @@ package routes
 import (
 	"net/http"
 	"self-payroll/common/structs"
+	"self-payroll/routes/company"
 	"self-payroll/routes/employee"
 	"self-payroll/routes/position"
 
@@ -21,4 +22,5 @@ func AppRoute(router *echo.Echo, db *gorm.DB) {
 
 	position.InitPositionRoute(router, db)
 	employee.InitEmployeeRoute(router, db)
+	company.InitCompanyRoute(router, db)
 }
