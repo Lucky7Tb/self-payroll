@@ -1,6 +1,7 @@
 package position
 
 import (
+	"errors"
 	"net/http"
 	"self-payroll/common/structs"
 	"self-payroll/models"
@@ -40,8 +41,8 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 		if skip != 0 {
 			result = result.Offset(skip)
 		}
-		result = result.Select("id", "name", "salary").Find(&positions)
-		if result.Error != nil {
+		err := result.Select("id", "name", "salary").Find(&positions).Error
+		if err != nil {
 			response.Code = http.StatusInternalServerError
 			response.Message = "Internal server error"
 			return ctx.JSON(http.StatusInternalServerError, response)
@@ -55,16 +56,16 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 			Code:    http.StatusCreated,
 			Message: "Success create position",
 		}
-		position := new(dto.CreatePositionDto)
-		ctx.Bind(position)
-		if err := ctx.Validate(position); err != nil {
+		dto := new(dto.CreatePositionDto)
+		ctx.Bind(dto)
+		if err := ctx.Validate(dto); err != nil {
 			return err
 		}
-		result := db.Create(&models.Position{
-			Name:   position.Name,
-			Salary: position.Salary,
-		})
-		if result.Error != nil {
+		err := db.Create(&models.Position{
+			Name:   dto.Name,
+			Salary: dto.Salary,
+		}).Error
+		if err != nil {
 			response.Code = http.StatusInternalServerError
 			response.Message = "Internal server error"
 			return ctx.JSON(http.StatusInternalServerError, response)
@@ -80,9 +81,9 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 
 		id := ctx.Param("id")
 		var position models.Position
-		result := db.Select("id", "name", "salary").Where("id = ?", id).Take(&position)
-		if result.Error != nil {
-			if result.Error.Error() == "record not found" {
+		err := db.Select("id", "name", "salary").Where("id = ?", id).Take(&position).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Code = http.StatusNotFound
 				response.Message = "Position not found!"
 				return ctx.JSON(http.StatusNotFound, response)
@@ -103,9 +104,9 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 
 		id := ctx.Param("id")
 		var position models.Position
-		result := db.Select("id").Where("id = ?", id).Take(&position)
-		if result.Error != nil {
-			if result.Error.Error() == "record not found" {
+		err := db.Select("id").Where("id = ?", id).Take(&position).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Code = http.StatusNotFound
 				response.Message = "Position not found!"
 				return ctx.JSON(http.StatusNotFound, response)
@@ -114,7 +115,12 @@ func InitPositionRoute(router *echo.Echo, db *gorm.DB) {
 			response.Message = "Internal server error"
 			return ctx.JSON(http.StatusInternalServerError, response)
 		}
-		result.Delete(&position)
+		err = db.Delete(&position).Error
+		if err.Error() == "ERROR: update or delete on table \"positions\" violates foreign key constraint \"fk_users_positions\" on table \"users\" (SQLSTATE 23503)" {
+			response.Code = http.StatusBadRequest
+			response.Message = "Cannot delete this position because there is employee on this position"
+			return ctx.JSON(http.StatusBadRequest, response)
+		}
 		return ctx.JSON(http.StatusNoContent, response)
 	})
 }

@@ -1,6 +1,7 @@
 package employee
 
 import (
+	"errors"
 	"net/http"
 	"self-payroll/common/structs"
 	"self-payroll/models"
@@ -57,21 +58,34 @@ func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
 			Code:    http.StatusCreated,
 			Message: "Success create employee",
 		}
-		employee := new(dto.CreateEmployeeDto)
-		ctx.Bind(employee)
-		if err := ctx.Validate(employee); err != nil {
+		dto := new(dto.CreateEmployeeDto)
+		ctx.Bind(dto)
+		if err := ctx.Validate(dto); err != nil {
 			return err
 		}
-		result := db.Create(&models.User{
-			PositionId: employee.PositionId,
-			SecretId:   employee.SecretId,
-			EmployeeId: employee.EmployeeId,
-			Name:       employee.Name,
-			Email:      employee.Email,
-			Phone:      employee.Phone,
-			Address:    employee.Address,
-		})
-		if result.Error != nil {
+
+		err := db.Select("id").Where("id = ?", dto.PositionId).Take(&models.Position{}).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				response.Code = http.StatusNotFound
+				response.Message = "Position not found!"
+				return ctx.JSON(http.StatusNotFound, response)
+			}
+			response.Code = http.StatusInternalServerError
+			response.Message = "Internal server error"
+			return ctx.JSON(http.StatusInternalServerError, response)
+		}
+
+		err = db.Create(&models.User{
+			PositionId: dto.PositionId,
+			SecretId:   dto.SecretId,
+			EmployeeId: dto.EmployeeId,
+			Name:       dto.Name,
+			Email:      dto.Email,
+			Phone:      dto.Phone,
+			Address:    dto.Address,
+		}).Error
+		if err != nil {
 			response.Code = http.StatusInternalServerError
 			response.Message = "Internal server error"
 			return ctx.JSON(http.StatusInternalServerError, response)
@@ -87,11 +101,11 @@ func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
 
 		id := ctx.Param("id")
 		var employee models.User
-		result := db.Select("id", "position_id", "employee_id", "secret_id", "name", "phone", "email", "address").Where("id = ?", id).Preload("Position").Take(&employee)
-		if result.Error != nil {
-			if result.Error.Error() == "record not found" {
+		err := db.Select("id", "position_id", "employee_id", "secret_id", "name", "phone", "email", "address").Where("id = ?", id).Preload("Position").Take(&employee).Error
+		if err != nil {
+			if err.Error() == "record not found" {
 				response.Code = http.StatusNotFound
-				response.Message = "Position not found!"
+				response.Message = "Emplpyee not found!"
 				return ctx.JSON(http.StatusNotFound, response)
 			}
 			response.Code = http.StatusInternalServerError
@@ -110,9 +124,9 @@ func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
 
 		id := ctx.Param("id")
 		var employee models.User
-		result := db.Select("id").Where("id = ?", id).Take(&employee)
-		if result.Error != nil {
-			if result.Error.Error() == "record not found" {
+		err := db.Select("id").Where("id = ?", id).Take(&employee).Error
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Code = http.StatusNotFound
 				response.Message = "Employee not found!"
 				return ctx.JSON(http.StatusNotFound, response)
@@ -121,7 +135,7 @@ func InitEmployeeRoute(router *echo.Echo, db *gorm.DB) {
 			response.Message = "Internal server error"
 			return ctx.JSON(http.StatusInternalServerError, response)
 		}
-		result.Delete(&employee)
+		db.Delete(&employee)
 		return ctx.JSON(http.StatusNoContent, response)
 	})
 }
