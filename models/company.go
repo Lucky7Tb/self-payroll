@@ -5,12 +5,12 @@ type Tabler interface {
 }
 
 type Company struct {
-	ID        string `gorm:"primarykey" json:"id"`
-	Name      string `gorm:"column:name" json:"name"`
-	Address   string `gorm:"column:address" json:"address"`
-	Balance   uint32 `gorm:"column:balance" json:"balance"`
-	CreatedAt string `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt string `gorm:"column:updated_at" json:"updated_at"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Address   string `json:"address"`
+	Balance   uint32 `json:"balance"`
+	CreatedAt string `json:"created_at"`
+	UpdatedAt string `json:"updated_at"`
 }
 
 func (Company) TableName() string {

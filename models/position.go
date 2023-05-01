@@ -1,9 +1,9 @@
 package models
 
 type Position struct {
-	ID        string `gorm:"primarykey" json:"id"`
-	Name      string `gorm:"column:name" json:"name"`
-	Salary    int64  `gorm:"column:salary" json:"salary"`
-	CreatedAt string `gorm:"column:created_at" json:"created_at"`
-	UpdatedAt string `gorm:"column:updated_at" json:"updated_at"`
+	ID        string `gorm:"default:uuid_generate_v4()" json:"id"`
+	Name      string `json:"name"`
+	Salary    uint32 `json:"salary"`
+	createdAt string `gorm:"default:CURRENT_TIMESTAMP(3)"`
+	updatedAt string `gorm:"default:CURRENT_TIMESTAMP(3)"`
 }
