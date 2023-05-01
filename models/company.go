@@ -11,8 +11,8 @@ type Company struct {
 	Name      string    `json:"name"`
 	Address   string    `json:"address"`
 	Balance   uint64    `json:"balance"`
-	createdAt string    `gorm:"default:CURRENT_TIMESTAMP(3)"`
-	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP(3)"`
+	createdAt time.Time `gorm:"default:CURRENT_TIMESTAMP(3)"`
+	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP(3)" json:"-"`
 }
 
 func (Company) TableName() string {
