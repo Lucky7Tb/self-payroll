@@ -79,7 +79,7 @@ func InitCompanyRoute(router *echo.Echo, db *gorm.DB) {
 		}
 
 		var company models.Company
-		err := db.Select("id", "balance").First(&company).Error
+		err := db.First(&company).Error
 		if err != nil {
 			if err.Error() == "record not found" {
 				response.Code = http.StatusNotFound
