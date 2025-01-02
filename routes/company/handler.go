@@ -52,7 +52,11 @@ func InitCompanyRoute(router *echo.Echo, db *gorm.DB) {
 			return ctx.JSON(http.StatusInternalServerError, response)
 		}
 
-		err = db.Model(&company).Updates(&models.Company{Name: dto.Name, Address: dto.Address, Balance: dto.Balance}).Error
+		if company.Id != "" {
+			err = db.Model(&company).Updates(&models.Company{Name: dto.Name, Address: dto.Address, Balance: dto.Balance}).Where("id = ?", company.Id).Error
+		} else {
+			err = db.Model(&company).Create(&models.Company{Name: dto.Name, Address: dto.Address, Balance: dto.Balance}).Error
+		}
 
 		if err != nil {
 			response.Code = http.StatusInternalServerError
